@@ -91,4 +91,14 @@ Here we see that it did!
  TRACE nu::cli > processing response (4 bytes)
 ```
 
-**under development**
+You can also (for newer versions of nu > 0.2.0) use help to see the command:
+
+```bash
+/code(master)> help len
+Return the length of a string
+
+Usage:
+  > len 
+
+/code(master)> 
+```

@@ -25,14 +25,16 @@ type IntParams map[string]int
 
 // Returning a length, must be int - must be customized for the plugin type
 type ResponseParams map[string]IntParams
+type ConfigResponseParams map[string]ConfigParams
 
 // A set of params is a map
 type ConfigParams struct {
-	Name	string	`json:"name"`
-	Usage	string	`json:"usage"`
-	Positionals	[]string	`json:"positionals"`
-	Named	Params	`json:"named"`
-	IsFilter	bool	`json:"is_filter"`
+	Name	string			`json:"name"`
+	Usage	string			`json:"usage"`
+	Positional	[]string	`json:"positional"`
+	RestPositional []string		`json:"rest_positional"`
+	Named	Params			`json:"named"`
+	IsFilter	bool		`json:"is_filter"`
 }
 
 // StringResponse is nested
@@ -53,6 +55,11 @@ type JsonResponse struct {
 	Params *ResponseParams	`json:"params"`	// arbitrary params
 }
 
+type ConfigResponse struct {
+	Jsonrpc string			`json:"jsonrpc"`
+	Method string			`json:"method"`
+	Params *ConfigResponseParams	`json:"params"`
+}
 
 // configure will add the configuration to the plugin, akin to an init.
 // Here we primarily provide the plugin name, usage, and arguments, but
@@ -63,7 +70,7 @@ func (plugin *NushellPlugin) configure() {
 		Name: "len",
 		Usage: "Return the length of a string",
 		Named: Params{},
-		Positionals: make([]string, 0),
+		Positional: make([]string, 0),
 		IsFilter: true}
 	plugin.Config = config
 }
@@ -107,8 +114,16 @@ func (plugin *NushellPlugin) printGoodResponse(params IntParams) error {
 // printConfigResponse will print the config json response to the terminal.
 func (plugin *NushellPlugin) printConfigResponse() error {
 
+	responseParams := &ConfigResponseParams{"Ok": plugin.Config}
+	
+	// Wrap params in json response
+	response := &ConfigResponse{
+		Jsonrpc: "2.0",
+		Method: "response",
+		Params: responseParams}
+
 	// Serialize the struct to json, exit out if there is an error
-	jsonString, err := json.Marshal(plugin.Config) 
+	jsonString, err := json.Marshal(response) 
 	if err != nil {
 		return err
 	}
