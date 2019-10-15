@@ -29,7 +29,7 @@ After you run it and press enter, here are some functions to interact:
 ```bash
 $ ./nu_plugin_len
 {"method":"config"}
-len
+{"jsonrpc":"2.0","method":"response","params":{"Ok":{"name":"len","usage":"Return the length of a string","positional":[],"rest_positional":null,"named":{},"is_filter":true}}}
 ```
 
 ### Start and End Filter
@@ -37,9 +37,10 @@ len
 ```bash
 $ ./nu_plugin_len
 {"method":"begin_filter"}
-[]
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
+
 {"method":"end_filter"}
-[]
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
 ```
 
 ### Calculate Length
@@ -47,11 +48,13 @@ $ ./nu_plugin_len
 ```bash
 $ ./nu_plugin_len
 {"method":"begin_filter"}
-[]
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
+
 {"method":"filter", "params": {"item": {"Primitive": {"String": "oogabooga"}}}}
-{"jsonrpc":"2.0","method":"response","params":{"Ok":{"Value":9}}}
+{"jsonrpc":"2.0","method":"response","params":{"Ok":{"Value":{"item":{"Primitive":{"Int":9}}}}}}
+
 {"method":"end_filter"}
-[]
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
 ```
 
 ## Logging
@@ -76,7 +79,7 @@ $ docker build -t vanessa/nu-plugin-len .
 Then shell inside - the default entrypoint is already the nushell.
 
 ```bash
-$ docker exec -it vanessa/nu-plugin-len
+$ docker run -it vanessa/nu-plugin-len
 ```
 
 Once inside, you can use `nu -l trace` to confirm that nu found your plugin.
@@ -84,11 +87,13 @@ Here we see that it did!
 
 ```bash
 /code(add/circleci)> nu -l trace
- TRACE nu::cli > Looking for plugins in "/usr/local/cargo/bin"
- TRACE nu::cli > Looking for plugins in "/usr/local/sbin"
- TRACE nu::cli > Looking for plugins in "/usr/local/bin"
- TRACE nu::cli > Found "nu_plugin_len"
- TRACE nu::cli > processing response (4 bytes)
+...
+ TRACE nu::cli > Trying "/usr/local/bin/nu_plugin_len"
+ TRACE nu::cli > processing response (176 bytes)
+ TRACE nu::cli > response: {"jsonrpc":"2.0","method":"response","params":{"Ok":{"name":"len","usage":"Return the length of a string","positional":[],"rest_positional":null,"named":{},"is_filter":true}}}
+
+ TRACE nu::cli > processing Signature { name: "len", usage: "Return the length of a string", positional: [], rest_positional: None, named: {}, is_filter: true }
+ TRACE nu::data::config > config file = /root/.config/nu/config.toml
 ```
 
 You can also (for newer versions of nu > 0.2.0) use help to see the command:
@@ -102,3 +107,19 @@ Usage:
 
 /code(master)> 
 ```
+
+Try out calculating the length of something! Here we are in a directory with
+one file named "myname" that is empty.
+
+```
+ls | get name | len | debug
+
+/tmp/test> ls | get name | len | debug
+Tagged { tag: Tag { anchor: None, span: Span { start: 0, end: 0 } }, item: Primitive(Int(BigInt { sign: Plus, data: BigUint { data: [6] } })) }
+━━━━━━━━━━━
+ <unknown> 
+───────────
+         6 
+━━━━━━━━━━━
+```
+I'm not sure if that's working? But it's a start.
