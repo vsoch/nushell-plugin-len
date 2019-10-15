@@ -53,3 +53,42 @@ $ ./nu_plugin_len
 {"method":"end_filter"}
 []
 ```
+
+## Logging
+
+Note that since I'm going to be using the plugin in a container, I don't
+mind logging to a temporary file at `/tmp/nu-plugin-len.log`. If you want
+to remove this, remove the logger.* snippets from [main.go](main.go) along
+with the "log" import.
+
+
+## Test With Nu
+
+Once you are happy, you can install the plugin with Nushell easily via Docker.
+Here we build the container using first GoLang to compile, and then
+copying the binary into quay.io/nushell/nu-base in /usr/local/bin.
+We do this so that the plugin is discovered. So first, build the container:
+
+```bash
+$ docker build -t vanessa/nu-plugin-len .
+```
+
+Then shell inside - the default entrypoint is already the nushell.
+
+```bash
+$ docker exec -it vanessa/nu-plugin-len
+```
+
+Once inside, you can use `nu -l trace` to confirm that nu found your plugin.
+Here we see that it did!
+
+```bash
+/code(add/circleci)> nu -l trace
+ TRACE nu::cli > Looking for plugins in "/usr/local/cargo/bin"
+ TRACE nu::cli > Looking for plugins in "/usr/local/sbin"
+ TRACE nu::cli > Looking for plugins in "/usr/local/bin"
+ TRACE nu::cli > Found "nu_plugin_len"
+ TRACE nu::cli > processing response (4 bytes)
+```
+
+**under development**

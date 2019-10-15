@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -15,7 +16,7 @@ import (
 // NushellPlugin represents an interface for a Nushell Plugin. It includes 
 // a configuration, along with supporting functions
 type NushellPlugin struct {
-	config	ConfigParams
+	Config	ConfigParams
 }
 
 // A set of base params is string[string]
@@ -27,11 +28,11 @@ type ResponseParams map[string]IntParams
 
 // A set of params is a map
 type ConfigParams struct {
-	name	string
-	usage	string
-	positionals	[]string
-	named	Params
-	is_filter	bool
+	Name	string	`json:"name"`
+	Usage	string	`json:"usage"`
+	Positionals	[]string	`json:"positionals"`
+	Named	Params	`json:"named"`
+	IsFilter	bool	`json:"is_filter"`
 }
 
 // StringResponse is nested
@@ -59,12 +60,12 @@ type JsonResponse struct {
 // as it's assumed that a plugin provides only one config
 func (plugin *NushellPlugin) configure() {
 	var config = ConfigParams{
-		name: "len",
-		usage: "Return the length of a string",
-		named: Params{},
-		positionals: make([]string, 1),
-		is_filter: true}
-	plugin.config = config
+		Name: "len",
+		Usage: "Return the length of a string",
+		Named: Params{},
+		Positionals: make([]string, 0),
+		IsFilter: true}
+	plugin.Config = config
 }
 
 // getLength of a string value, nested at stringValue["item"]["Primitive"]["String"]
@@ -80,7 +81,7 @@ func (plugin *NushellPlugin) getLength(stringValue interface{}) int {
 }
 
 
-// printResponse will print a json response to the terminal. The 
+// printGoodResponse will print a json response to the terminal. The 
 // status would typically be "Ok" for a good response.
 func (plugin *NushellPlugin) printGoodResponse(params IntParams) error {
 
@@ -103,7 +104,31 @@ func (plugin *NushellPlugin) printGoodResponse(params IntParams) error {
 	return nil
 }
 
+// printConfigResponse will print the config json response to the terminal.
+func (plugin *NushellPlugin) printConfigResponse() error {
+
+	// Serialize the struct to json, exit out if there is an error
+	jsonString, err := json.Marshal(plugin.Config) 
+	if err != nil {
+		return err
+	}
+
+	// Write the response to stdout
+	fmt.Println(string(jsonString))
+	return nil
+}
+
+
 func main() {
+
+	// Set up temporary logger
+	f, err := os.OpenFile("/tmp/nu_plugin_len.log",
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Println(err)
+	}
+	defer f.Close()	
+	logger := log.New(f, "nu_plugin_len ", log.LstdFlags)
 
 	// Instantiate new plugin interface, generate config
 	plugin := NushellPlugin{}
@@ -121,19 +146,21 @@ func main() {
 		} 
 
 		// look for a method in the line
-		if method, ok := line["method"]; ok {
-		
+		if method, ok := line["method"]; ok {	
+	
 			// Case 1: method is config
 			if method == "config" {
-				fmt.Println(plugin.config.name)
+				logger.Println("Request for config", line)
+			        plugin.printConfigResponse()
 				break
 
 			} else if method == "begin_filter" {
-				emptyResponse := make([]string, 1)
+				logger.Println("Request for begin filter", line)
+				emptyResponse := make([]string, 0)
 				fmt.Println(emptyResponse)
 
 			} else if method == "filter" {
-
+				logger.Println("Request for filter", line)
 				if params, ok := line["params"]; ok {
 					intLength := plugin.getLength(params)
 					value := IntParams{"Value": intLength}
@@ -141,7 +168,8 @@ func main() {
 				}
 
 			} else if method == "end_filter" {
-				emptyResponse := make([]string, 1)
+				logger.Println("Request for end filter", line)
+				emptyResponse := make([]string, 0)
 				fmt.Println(emptyResponse)
 				break
 			}
