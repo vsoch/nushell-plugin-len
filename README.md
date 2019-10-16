@@ -49,7 +49,7 @@ $ ./nu_plugin_len
 {"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
 
 {"method":"filter", "params": {"item": {"Primitive": {"String": "oogabooga"}}}}
-{"jsonrpc":"2.0","method":"response","params":{"Ok":{"Value":{"item":{"Primitive":{"Int":9}}}}}}
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[{"Ok":{"Value":{"item":{"Primitive":{"Int":9}},"tag":{"anchor":null,"span":{"end":0,"start":0}}}}}]}}
 
 {"method":"end_filter"}
 {"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
@@ -133,8 +133,19 @@ Usage:
 /code(master)> 
 ```
 
-Try out calculating the length of something! Here we are in a directory with
-one file named "myname" that is empty.
+Try out calculating the length of something! First, calculate the length of a simple
+string (piped from echo):
+
+```bash
+/code(master)> echo four | len
+━━━━━━━━━━━
+ <unknown> 
+───────────
+         4 
+━━━━━━━━━━━
+```
+
+Now let's do a more complex example. Here we are in a directory with one file named "myname" that is empty.
 
 ```
 /tmp/test> ls
