@@ -112,14 +112,54 @@ Try out calculating the length of something! Here we are in a directory with
 one file named "myname" that is empty.
 
 ```
-ls | get name | len | debug
+/tmp/test> ls
+━━━━━━━━┯━━━━━━┯━━━━━━━━━━┯━━━━━━┯━━━━━━━━━━━━━━━━┯━━━━━━━━━━━━━━━━
+ name   │ type │ readonly │ size │ accessed       │ modified 
+────────┼──────┼──────────┼──────┼────────────────┼────────────────
+ myname │ File │          │  —   │ 41 seconds ago │ 41 seconds ago 
+━━━━━━━━┷━━━━━━┷━━━━━━━━━━┷━━━━━━┷━━━━━━━━━━━━━━━━┷━━━━━━━━━━━━━━━━
+```
 
-/tmp/test> ls | get name | len | debug
-Tagged { tag: Tag { anchor: None, span: Span { start: 0, end: 0 } }, item: Primitive(Int(BigInt { sign: Plus, data: BigUint { data: [6] } })) }
+Try listing, getting the name, and calculating the length.
+
+```bash
+/tmp/test> ls | get name | len
 ━━━━━━━━━━━
  <unknown> 
 ───────────
          6 
 ━━━━━━━━━━━
 ```
-I'm not sure if that's working? But it's a start.
+
+or test it out with debug.
+
+```bash
+ls | get name | len | debug
+
+/tmp/test> ls | get name | len | debug
+Tagged { tag: Tag { anchor: None, span: Span { start: 0, end: 2 } }, item: Primitive(Int(BigInt { sign: Plus, data: BigUint { data: [6] } })) }
+━━━━━━━━━━━
+ <unknown> 
+───────────
+         6 
+━━━━━━━━━━━
+```
+
+Add another file to see the table get another row
+
+```bash
+touch four
+```
+```bash
+/tmp/test> ls | get name | len 
+━━━┯━━━━━━━━━━━
+ # │ <unknown> 
+───┼───────────
+ 0 │         4 
+ 1 │         6 
+━━━┷━━━━━━━━━━━
+```
+
+Mind you, I'm not a wizard Go Programmer, but I'd like the community to 
+at least have an example to start with! Please contribute to this plugin to make
+it better!
