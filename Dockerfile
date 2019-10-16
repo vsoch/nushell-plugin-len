@@ -1,5 +1,5 @@
 FROM golang:1.13.1 as builder
-# docker build -t vanessa/nushell-plugin-ls .
+# docker build -t vanessa/nushell-plugin-len .
 WORKDIR /code
 COPY . /code
 RUN make
