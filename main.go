@@ -19,18 +19,13 @@ type NushellPlugin struct {
 	Config	ConfigParams
 }
 
-// IntParams are needed for the getLength response
-type Params map[string]string
-type NestedParams map[string]LengthResponse
-type ArrayResponseParams []ResponseParams
-type FinalResponseParams map[string]ArrayResponseParams
-type ArrayParams []string
+// Tag is passed from stream during filter, we parse and pass forward
 type Tag struct {
 	Anchor interface{}	`json:"anchor"`
 	Span map[string]int	`json:"span"`
 }
 
-// LengthResponse is nested dict under Primitive -> Int -> value
+// LengthResponse is nested under Primitive -> Int -> value
 type LengthResponse struct {
 	Item struct {
     		Primitive struct {
@@ -40,12 +35,22 @@ type LengthResponse struct {
 	Tag Tag	`json:"tag"`
 }
 
-// Returning a length, must be int - must be customized for the plugin type
-type ResponseParams map[string]NestedParams
-type ConfigResponseParams map[string]ConfigParams
-type EmptyResponseParams map[string]ArrayParams
+// NestedParams support inner {"Value": LengthResponse} with Item.Primitive.Int
+type NestedParams map[string]LengthResponse
 
-// A set of params is a map
+// ResponseParams support inner {"Ok": NestedParams}
+type ResponseParams map[string]NestedParams
+
+// ArrayResponseParams are an array of []ResponseParams for JsonResponse.Params
+type ArrayResponseParams []ResponseParams
+
+// FinalResponseParams wrap ArrayResponseParams: {"Ok": ArrayResponseParams}
+type FinalResponseParams map[string]ArrayResponseParams
+
+// Params are general string[string] map for the config
+type Params map[string]string
+
+// ConfigParams holds configuration information for the plugin
 type ConfigParams struct {
 	Name	string			`json:"name"`
 	Usage	string			`json:"usage"`
@@ -55,16 +60,26 @@ type ConfigParams struct {
 	IsFilter	bool		`json:"is_filter"`
 }
 
+// ConfigResponseParams add another level of nesting for {"Ok": ConfigParams}
+type ConfigResponseParams map[string]ConfigParams
+
+
+// ArrayParams are intended for end_filter and begin_filter
+type ArrayParams []string
+
+// EmptyResponseParams supports {"Ok": ArrayParams} (e.g., {"Ok": []})
+type EmptyResponseParams map[string]ArrayParams
+
 // JsonResponse is a standard Json Response as defined by:
 // https://www.jsonrpc.org/specification#response_object
-// where the params are a single dictionary of params
+// Returns our FinalResponseParams as JsonResponse.Params
 type JsonResponse struct {
 	Jsonrpc string			`json:"jsonrpc"`	// jsonrpc version, e.g., 2.0
 	Method string			`json:"method"`		// method, e.g., response
 	Params FinalResponseParams	`json:"params"`		// arbitrary params
 }
 
-// ConfigResponse is specifically to return Ok status with ConfigResponseParams
+// ConfigResponse is specifically to return Jsonrpc with Params.ConfigResponseParams
 type ConfigResponse struct {
 	Jsonrpc string			`json:"jsonrpc"`
 	Method string			`json:"method"`
@@ -95,7 +110,7 @@ func (plugin *NushellPlugin) configure() {
 
 // getLength of a string value, nested at stringValue["item"]["Primitive"]["String"]
 func (plugin *NushellPlugin) getLength(stringValue interface{}) int {
-
+	
 	// I hope there is a more elegant way to do this
 	jsonValues := stringValue.(map[string]interface{})
 	item := jsonValues["item"].(map[string]interface{})
@@ -106,17 +121,33 @@ func (plugin *NushellPlugin) getLength(stringValue interface{}) int {
 }
 
 
-// printGoodResponse will print a json response to the terminal. The 
-// status would typically be "Ok" for a good response, and since
-// we take IntParams the intended use is to return the Value: IntLength.
-func (plugin *NushellPlugin) printGoodResponse(length int) error {
+// getTag from the filter input to return in response
+func (plugin *NushellPlugin) getTag(stringValue interface{}) Tag {
+	
+	// I hope there is a more elegant way to do this
+	jsonValues := stringValue.(map[string]interface{})
+	tagGroup := jsonValues["tag"].(map[string]interface{})
+	spanGroup := tagGroup["span"].(map[string]interface{})
 
-	// Create the tag for the response
+	// Create the span, it has a start and end
 	span := map[string]int{}
-	span["start"] = 0
-	span["end"] = 0
+	span["start"] = int(spanGroup["start"].(float64))
+	span["end"] = int(spanGroup["end"].(float64))
 
 	tag := Tag{Span: span}
+
+	// If anchor isn't nil, add it (not sure if type is correct)
+	if anchor, ok := tagGroup["anchor"].(interface{}); ok {
+		tag.Anchor = anchor
+	}
+
+	return tag
+}
+
+
+// printGoodResponse will print a json response to the terminal. The 
+// generates a JsonResponse with Params.FinalResponseParams
+func (plugin *NushellPlugin) printGoodResponse(length int, tag Tag) error {
 
 	lengthResponse := LengthResponse{}
 	lengthResponse.Item.Primitive.Int = length
@@ -148,6 +179,7 @@ func (plugin *NushellPlugin) printGoodResponse(length int) error {
 
 // printEmptyResponse will print an ArrayResponse that is empty.
 // the intende use case is for an end_filter or start_filter
+// generates an ArrayResponse with Params.EmptyResponseParams
 func (plugin *NushellPlugin) printEmptyResponse() error {
 
 	emptyArray := make([]string, 0)
@@ -171,6 +203,7 @@ func (plugin *NushellPlugin) printEmptyResponse() error {
 }
 
 // printConfigResponse will print the config json response to the terminal.
+// generates an ConfigResponse with Params.ConfigResponseParams
 func (plugin *NushellPlugin) printConfigResponse() error {
 
 	responseParams := &ConfigResponseParams{"Ok": plugin.Config}
@@ -236,7 +269,8 @@ func main() {
 				logger.Println("Request for filter", line)
 				if params, ok := line["params"]; ok {
 					intLength := plugin.getLength(params)
-					plugin.printGoodResponse(intLength)
+					tag := plugin.getTag(params)
+					plugin.printGoodResponse(intLength, tag)
 				}
 
 			} else if method == "end_filter" {
