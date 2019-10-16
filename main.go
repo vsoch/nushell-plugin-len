@@ -126,19 +126,31 @@ func (plugin *NushellPlugin) getTag(stringValue interface{}) Tag {
 	
 	// I hope there is a more elegant way to do this
 	jsonValues := stringValue.(map[string]interface{})
-	tagGroup := jsonValues["tag"].(map[string]interface{})
-	spanGroup := tagGroup["span"].(map[string]interface{})
 
-	// Create the span, it has a start and end
+	// Create the span to hold a start and end, and empty tag
 	span := map[string]int{}
-	span["start"] = int(spanGroup["start"].(float64))
-	span["end"] = int(spanGroup["end"].(float64))
+	tag := Tag{}
 
-	tag := Tag{Span: span}
+	// Real nushell invokation will include a tag
+	if tagGroup, ok := jsonValues["tag"].(map[string]interface{}); ok {
 
-	// If anchor isn't nil, add it (not sure if type is correct)
-	if anchor, ok := tagGroup["anchor"].(interface{}); ok {
-		tag.Anchor = anchor
+		spanGroup := tagGroup["span"].(map[string]interface{})
+
+		// Create the span, it has a start and end
+		span["start"] = int(spanGroup["start"].(float64))
+		span["end"] = int(spanGroup["end"].(float64))
+		tag.Span = span
+
+		// If anchor isn't nil, add it (not sure if type is correct)
+		if anchor, ok := tagGroup["anchor"].(interface{}); ok {
+			tag.Anchor = anchor
+		}
+
+	// Otherwise generate a dummy one for local testing
+	} else {
+		span["start"] = 0
+		span["end"] = 0
+		tag.Span = span
 	}
 
 	return tag

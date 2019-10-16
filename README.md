@@ -1,18 +1,16 @@
 # Nushell Plugin in GoLang
 
+![img/nushell-plugin-len.png](img/nushell-plugin-len.png)
+
 This is an example implementation of a length (len) plugin for Nushell in GoLang. While
 there are many ways to go about this, I created this particular implementation,
 of course wanting to practice a bit of Go and learn about nushell. This is
 incredibly challenging because GoLang doesn't make it easy to parse nested
 levels of Json without knowing the structure in advance.
 
-**under development**
-
-I haven't tested yet with nushell, or finished the examples below. Stay tuned!
-
 ## Build
 
-You can use the Makefile to build the plugin
+If you have Go installed locally, you can use the Makefile to build the plugin
 
 ```bash
 $ make
@@ -56,6 +54,33 @@ $ ./nu_plugin_len
 {"method":"end_filter"}
 {"jsonrpc":"2.0","method":"response","params":{"Ok":[]}}
 ```
+
+The above filter works because the script generates a tag (under params) if the
+filter stream doesn't provide one, however with nushell we actually grab
+the tag group from the stream and pass it forward. 
+
+```bash
+$ ./nu_plugin_len
+{"method":"filter", "params": {"item": {"Primitive": {"String": "oogabooga"}}, "tag":{"anchor":null,"span":{"end":10,"start":12}}}}
+
+{"jsonrpc":"2.0","method":"response","params":{"Ok":[{"Ok":{"Value":{"item":{"Primitive":{"Int":9}},"tag":{"anchor":null,"span":{"end":10,"start":12}}}}}]}}
+```
+
+In the above we see the custom start and end are passed forward. Both examples (with and without)
+will work here, done so that you can test locally without nushell.
+
+## Order of Operations
+
+Keep in mind that when nushell finds the plugin on the path, it's going to:
+
+ - discover the plugin by way of being on the path
+ - call the "config" method to get metadata and register it
+ - call begin_filter when it's invoked
+ - call filter during invokation
+ - call end_filter to finish up
+
+That's a very high level description, see [the plugin page](https://github.com/nushell/contributor-book/blob/master/en/plugins.md) to read more about discovery and usage.
+
 
 ## Logging
 
@@ -163,3 +188,24 @@ touch four
 Mind you, I'm not a wizard Go Programmer, but I'd like the community to 
 at least have an example to start with! Please contribute to this plugin to make
 it better!
+
+## Docker Hub
+
+If you don't want to build but just want to play with the plugin,
+you can pull directly from Docker Hub
+
+```bash
+$ docker pull vanessa/nu-plugin-len
+$ docker run -it vanessa/nu-plugin-len
+```
+
+Don't forget to check out the logging file at `/tmp/nushell-plugin-len.log` if you 
+need to debug!
+
+```bash
+/tmp> cat /tmp/nu_plugin_len.log
+nu_plugin_len 2019/10/16 15:01:02 Request for config map[jsonrpc:2.0 method:config params:[]]
+nu_plugin_len 2019/10/16 15:01:16 Request for begin filter map[jsonrpc:2.0 method:begin_filter params:map[args:map[named:<nil> positional:<nil>] name_tag:map[anchor:<nil> span:map[end:19 start:16]]]]
+nu_plugin_len 2019/10/16 15:01:16 Request for filter map[jsonrpc:2.0 method:filter params:map[item:map[Primitive:map[String:nu_plugin_len.log]] tag:map[anchor:<nil> span:map[end:2 start:0]]]]
+nu_plugin_len 2019/10/16 15:01:16 Request for end filter map[jsonrpc:2.0 method:end_filter params:[]]
+```
